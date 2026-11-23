@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Froopyland — a pocket world</title>
+  <meta name="description" content="An explorable, procedurally generated pocket world." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='28' fill='%237fffd4'/%3E%3Ccircle cx='32' cy='28' r='10' fill='white'/%3E%3Ccircle cx='32' cy='28' r='5' fill='%23221'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <canvas id="game"></canvas>
+
+  <div id="hud" class="hidden">
+    <div id="topleft" class="hud-box">
+      <div id="worldName">—</div>
+      <div class="row small"><span class="chip" id="seedChip" title="Click to copy seed">seed: —</span><span id="clock">--:--</span><span id="weatherLabel"></span></div>
+      <div class="row small" id="biomeLabel"></div>
+      <div class="counters">
+        <span title="Places discovered">⌂ <b id="cPlaces">0</b></span>
+        <span title="Species observed">❦ <b id="cSpecies">0</b></span>
+        <span title="Memory motes collected">✧ <b id="cMotes">0</b></span>
+        <span title="Glowfruit carried">● <b id="cFruit">0</b></span>
+      </div>
+    </div>
+    <div id="compass"><div id="compassStrip"></div><div id="compassTick"></div></div>
+    <canvas id="minimap" width="190" height="190"></canvas>
+    <div id="boosts"></div>
+    <div id="crosshair"></div>
+    <div id="toasts"></div>
+    <div id="prompt" class="hidden"></div>
+    <div id="infoCard" class="hidden"></div>
+    <div id="hints"></div>
+    <div id="stats" class="hidden"></div>
+    <div id="wallWarn" class="hidden">CONTAINMENT EDGE — the pocket ends here</div>
+  </div>
+
+  <!-- Start screen -->
+  <div id="start" class="overlay">
+    <div class="start-card">
+      <h1>FROOPYLAND</h1>
+      <p class="tag">a small artificial pocket world, generated from a seed, slightly too cheerful</p>
+      <div class="field">
+        <label for="startSeed">World seed</label>
+        <div class="row"><input id="startSeed" type="text" maxlength="48" spellcheck="false" /><button id="startDice" title="Random seed">🎲</button></div>
+      </div>
+      <div class="field">
+        <label>Preset</label>
+        <div class="row presets" id="startPresets"></div>
+      </div>
+      <div class="row buttons">
+        <button id="btnContinue" class="primary hidden">Continue</button>
+        <button id="btnStart" class="primary">Enter world</button>
+      </div>
+      <div class="loading" id="loadingText"></div>
+      <div class="quick">
+        <div><b>WASD</b> move · <b>Mouse</b> look (click to capture) · <b>Space</b> jump / hold to glide · <b>Shift</b> run</div>
+        <div><b>E</b> interact · <b>Q</b> / right-click observe · <b>R</b> whistle · <b>V</b> 1st/3rd person</div>
+        <div><b>M</b> map · <b>J</b> journal · <b>P</b> creator controls · <b>H</b> help · gamepad supported</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Panels -->
+  <div id="panelHelp" class="overlay panel-wrap hidden">
+    <div class="panel">
+      <header><h2>How to play</h2><button class="close" data-close>✕</button></header>
+      <div class="panel-body two-col">
+        <section>
+          <h3>Keyboard &amp; mouse</h3>
+          <table class="keys">
+            <tr><td>W A S D / arrows</td><td>Move</td></tr>
+            <tr><td>Mouse</td><td>Look (click the world to capture the mouse, Esc to release; or drag)</td></tr>
+            <tr><td>Mouse wheel</td><td>Camera distance</td></tr>
+            <tr><td>Shift</td><td>Run</td></tr>
+            <tr><td>Space</td><td>Jump · press again for a double jump · hold while falling to glide</td></tr>
+            <tr><td>E</td><td>Interact: pick fruit, feed residents, use landmarks</td></tr>
+            <tr><td>Q / right-click</td><td>Observe the resident under the crosshair</td></tr>
+            <tr><td>R</td><td>Whistle — residents react by temperament</td></tr>
+            <tr><td>V</td><td>Toggle first / third person</td></tr>
+            <tr><td>M</td><td>World map (click to place a waypoint)</td></tr>
+            <tr><td>J</td><td>Journal</td></tr>
+            <tr><td>P or Tab</td><td>Creator controls (seed, presets, world settings)</td></tr>
+            <tr><td>H</td><td>This help</td></tr>
+            <tr><td>N</td><td>Mute · <b>F3</b> performance stats</td></tr>
+          </table>
+        </section>
+        <section>
+          <h3>Gamepad</h3>
+          <table class="keys">
+            <tr><td>Left stick</td><td>Move (push fully + RB/L3 to run)</td></tr>
+            <tr><td>Right stick</td><td>Look · R3 toggles view</td></tr>
+            <tr><td>A</td><td>Jump / glide</td></tr>
+            <tr><td>X</td><td>Interact</td></tr>
+            <tr><td>Y</td><td>Observe</td></tr>
+            <tr><td>LB</td><td>Whistle</td></tr>
+            <tr><td>LT / RT</td><td>Camera zoom out / in</td></tr>
+            <tr><td>View/Back</td><td>Map · <b>Menu/Start</b> creator · <b>D-pad ↑</b> journal · <b>↓</b> help</td></tr>
+            <tr><td>B</td><td>Close panel</td></tr>
+            <tr><td>In creator</td><td>D-pad ←/→ cycle preset · X new random seed · A regenerate</td></tr>
+          </table>
+          <h3>Things to do</h3>
+          <ul>
+            <li><b>Discover places</b> — the compass shows a pulsing <span class="pink">?</span> towards the nearest signal. Each landmark does something: portals fold you across the world, monoliths and spires fill in your map, eggs hatch, fountains make you fast.</li>
+            <li><b>Observe residents</b> — press Q on a creature to log its species, then watch it to record behaviours (eating, drinking, sleeping, fleeing, singing…).</li>
+            <li><b>Collect memory motes</b> ✧ — every 3 unlock a fragment of the builder's log.</li>
+            <li><b>Pick glowfruit</b> ● from bushes and feed residents to befriend them.</li>
+            <li><b>Decode the world's rules</b> at terminals and monoliths — each seed has its own laws.</li>
+            <li>Mushroom caps bounce you. Rainbow rivers carry you. The edge of the world is a wall.</li>
+          </ul>
+        </section>
+      </div>
+    </div>
+  </div>
+
+  <div id="panelJournal" class="overlay panel-wrap hidden">
+    <div class="panel wide">
+      <header><h2>Journal</h2><div class="tabs" id="journalTabs"></div><button class="close" data-close>✕</button></header>
+      <div class="panel-body" id="journalBody"></div>
+    </div>
+  </div>
+
+  <div id="panelMap" class="overlay panel-wrap hidden">
+    <div class="panel map-panel">
+      <header><h2>Map</h2><span class="small muted">Click to set a waypoint · wheel to zoom · drag to pan</span><button class="close" data-close>✕</button></header>
+      <div class="map-wrap"><canvas id="fullMap" width="760" height="760"></canvas>
+        <div class="map-legend" id="mapLegend"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="panelCreator" class="overlay panel-wrap hidden">
+    <div class="panel wide">
+      <header><h2>Creator controls</h2><button class="close" data-close>✕</button></header>
+      <div class="panel-body two-col" id="creatorBody"></div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
